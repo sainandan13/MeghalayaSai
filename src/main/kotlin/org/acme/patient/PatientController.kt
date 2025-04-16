@@ -7,6 +7,7 @@ import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import org.eclipse.microprofile.openapi.annotations.Operation
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
+import java.time.LocalDate
 
 
 @Path("/patients")
@@ -44,5 +45,29 @@ class PatientController {
     fun delete(@PathParam("id") id: Long): Response {
         service.deletePatient(id)
         return Response.noContent().build()
+    }
+
+    @GET
+    @Path("/search")
+    @Operation(summary = "Search patients by email, place, ABHA ID or id")
+    fun searchPatients(
+        @QueryParam("id") id: String?,
+        @QueryParam("firstName") firstName: String?,
+        @QueryParam("lastName") lastName: String?,
+        @QueryParam("mobile") mobile: String?,
+        @QueryParam("email") email: String?,
+        @QueryParam("dobFrom") dobFrom: LocalDate?,
+        @QueryParam("dobTo") dobTo: LocalDate?
+    ): Response {
+        val results = service.search(
+            id = id,
+            firstName = firstName,
+            lastName = lastName,
+            mobile = mobile,
+            email = email,
+            dobFrom = dobFrom,
+            dobTo = dobTo
+        )
+        return Response.ok(results).build()
     }
 }

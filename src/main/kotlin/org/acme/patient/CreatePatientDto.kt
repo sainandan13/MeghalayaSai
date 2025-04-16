@@ -30,7 +30,7 @@ data class PatientDto(
     @field:NotBlank val city: String,
     @field:NotBlank val state: String,
     @field:NotBlank val postalCode: String,
-    val country: String = "India",
+    @field:NotBlank val country: String = "India",
     val landmark: String?,
     @field:Email @field:NotBlank val email: String,
     val phone: String?,

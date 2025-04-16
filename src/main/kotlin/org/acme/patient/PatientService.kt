@@ -60,6 +60,58 @@ class PatientService {
         return query.resultList
     }
 
+    fun search(
+        id: String?,
+        firstName: String?,
+        lastName: String?,
+        mobile: String?,
+        email: String?,
+        dobFrom: LocalDate?,
+        dobTo: LocalDate?
+    ): List<Patient> {
+        val query = StringBuilder("1=1")
+        val params = mutableMapOf<String, Any>()
+
+        id?.takeIf { it.isNotBlank() }?.let {
+            query.append(" AND CAST(id AS TEXT) = :id")
+            params["id"] = it
+        }
+
+        firstName?.takeIf { it.isNotBlank() }?.let {
+            query.append(" AND LOWER(firstName) LIKE LOWER(:firstName)")
+            params["firstName"] = "%$it%"
+        }
+
+        lastName?.takeIf { it.isNotBlank() }?.let {
+            query.append(" AND LOWER(lastName) LIKE LOWER(:lastName)")
+            params["lastName"] = "%$it%"
+        }
+
+        mobile?.takeIf { it.isNotBlank() }?.let {
+            query.append(" AND mobilePhone = :mobile")
+            params["mobile"] = it
+        }
+
+        email?.takeIf { it.isNotBlank() }?.let {
+            query.append(" AND LOWER(email) LIKE LOWER(:email)")
+            params["email"] = "%$it%"
+        }
+
+        if (dobFrom != null && dobTo != null) {
+            query.append(" AND birthDate BETWEEN :dobFrom AND :dobTo")
+            params["dobFrom"] = dobFrom
+            params["dobTo"] = dobTo
+        } else if (dobFrom != null) {
+            query.append(" AND birthDate >= :dobFrom")
+            params["dobFrom"] = dobFrom
+        } else if (dobTo != null) {
+            query.append(" AND birthDate <= :dobTo")
+            params["dobTo"] = dobTo
+        }
+
+        return patientRepository.find(query.toString(), params).list()
+    }
+
     @Transactional
     fun updatePatient(id: Long, dto: PatientDto): Patient {
         val existing = patientRepository.findById(id) ?: throw NotFoundException("Patient not found")
@@ -68,17 +120,10 @@ class PatientService {
         existing.firstName = dto.firstName
         existing.lastName = dto.lastName
         existing.middleName = dto.middleName
-        existing.namePrefix = dto.namePrefix
-        existing.nameSuffix = dto.nameSuffix
-        existing.preferredName = dto.preferredName
-        existing.genderIdentity = dto.genderIdentity
-        existing.gender = dto.gender
-        existing.preferredPronouns = dto.preferredPronouns
-        existing.birthDate = dto.birthDate
-        existing.age = LocalDate.now().year - dto.birthDate.year
-        existing.childrenCount = dto.childrenCount?.toString()
-        existing.bloodGroup = dto.bloodGroup
-        existing.maritalStatus = dto.maritalStatus
+
+
+
+
         existing.abha = dto.abha
         existing.mrn = dto.mrn
         existing.aadhar = dto.aadhar
@@ -94,24 +139,13 @@ class PatientService {
         existing.phone = dto.phone
         existing.mobilePhone = dto.mobilePhone
         existing.emergencyName = dto.emergencyName
-        existing.emergencyRelation = dto.emergencyRelation
+
         existing.emergencyPhone = dto.emergencyPhone
-        existing.chiefComplaint = dto.chiefComplaint
-        existing.consultantName = dto.consultantName
-        existing.department = dto.department
-        existing.dateOfVisit = dto.dateOfVisit?.toString()
-        existing.timeOfVisit = dto.timeOfVisit
-        existing.appointmentType = dto.appointmentType
-        existing.referredBy = dto.referredBy
+
+
+
         existing.comments = dto.comments
-        existing.preferredContactMethod = dto.preferredContactMethod
-        existing.appointmentReminders = dto.appointmentReminders
-        existing.interpreterRequired = dto.interpreterRequired?.toString()
-        existing.ethnicity = dto.ethnicity
-        existing.race = dto.race
-        existing.organDonor = dto.organDonor
-        existing.livingWill = dto.livingWill
-        existing.powerOfAttorney = dto.powerOfAttorney
+
 
         return existing // No need to merge; the entity is already managed in a @Transactional context
     }
@@ -165,7 +199,7 @@ class PatientService {
         patient.comments = comments
         patient.preferredContactMethod = preferredContactMethod
         patient.appointmentReminders = appointmentReminders
-        patient.interpreterRequired = interpreterRequired?.toString()
+        patient.interpreterRequired = interpreterRequired.toString()
         patient.ethnicity = ethnicity
         patient.race = race
         patient.organDonor = organDonor
