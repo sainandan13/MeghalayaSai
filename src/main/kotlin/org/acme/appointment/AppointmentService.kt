@@ -6,10 +6,11 @@ import jakarta.persistence.EntityManager
 import jakarta.transaction.Transactional
 import jakarta.ws.rs.NotFoundException
 import org.acme.patient.Patient
+import org.acme.services.ServiceEntity
+
 
 @ApplicationScoped
 class AppointmentService {
-
     @Inject
     lateinit var appointmentRepository: AppointmentRepository
 
@@ -21,20 +22,23 @@ class AppointmentService {
         val patient = entityManager.find(Patient::class.java, dto.patientId)
             ?: throw NotFoundException("Patient not found")
 
+        val service = dto.serviceId?.let { entityManager.find(ServiceEntity::class.java, it) }
+
         val appointment = AppointmentEntity()
         appointment.patient = patient
-        appointment.practitionerId = dto.practitionerId
+
         appointment.appointmentDate = dto.appointmentDate
-        appointment.status = dto.status
-        appointment.serviceCategory = dto.serviceCategory
-        appointment.serviceType = dto.serviceType
-        appointment.reasonCode = dto.reasonCode
-        appointment.description = dto.description
+
+        appointment.notes = dto.notes
+        appointment.startTime = dto.startTime
+        appointment.endTime = dto.endTime
+        appointment.provider = dto.provider
+        appointment.location = dto.location
+        appointment.speciality = dto.speciality
+        appointment.service = service
 
         appointmentRepository.persist(appointment)
         return appointment
-
-
     }
 
     fun listAppointments(): List<AppointmentEntity> = appointmentRepository.listAll()
@@ -42,3 +46,4 @@ class AppointmentService {
     fun findByPatientId(patientId: Long): List<AppointmentEntity> =
         appointmentRepository.find("patient.id", patientId).list()
 }
+
