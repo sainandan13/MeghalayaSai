@@ -72,8 +72,8 @@ class PatientService {
         val query = StringBuilder("1=1")
         val params = mutableMapOf<String, Any>()
 
-        id?.takeIf { it.isNotBlank() }?.let {
-            query.append(" AND CAST(id AS TEXT) = :id")
+        id?.takeIf { it.isNotBlank() }?.toLongOrNull()?.let {
+            query.append(" AND id = :id")
             params["id"] = it
         }
 
@@ -111,6 +111,55 @@ class PatientService {
 
         return patientRepository.find(query.toString(), params).list()
     }
+    @Transactional
+    fun mergePatients(request: PatientMergeRequest) {
+        if (!request.confirmMerge || request.mergeOption != "Merge") {
+            throw WebApplicationException("Merge not confirmed or option not selected", Response.Status.BAD_REQUEST)
+        }
+
+        val retained = patientRepository.findById(request.mergedIntoPatientId)
+            ?: throw NotFoundException("Retained patient not found")
+        val discarded = patientRepository.findById(request.discardedPatientId)
+            ?: throw NotFoundException("Discarded patient not found")
+
+        // Merge logic - fill retained with discarded's data if retained's fields are null
+        if (retained.preferredName.isNullOrBlank()) retained.preferredName = discarded.preferredName
+        if (retained.middleName.isNullOrBlank()) retained.middleName = discarded.middleName
+        if (retained.phone.isNullOrBlank()) retained.phone = discarded.phone
+        if (retained.emergencyPhone.isNullOrBlank()) retained.emergencyPhone = discarded.emergencyPhone
+        if (retained.email.isNullOrBlank()) retained.email = discarded.email
+        if (retained.comments.isNullOrBlank()) retained.comments = discarded.comments
+
+        if (!discarded.comments.isNullOrBlank()) {
+            retained.comments = if (retained.comments.isNullOrBlank()) discarded.comments
+            else retained.comments + " | MergeNote: ${discarded.comments}"
+        }
+
+        discarded.dateOfVisit?.let { discardedDate ->
+            val retainedDate = retained.dateOfVisit
+            if (retainedDate == null || retainedDate.isBlank() || discardedDate < retainedDate) {
+                retained.dateOfVisit = discardedDate
+            }
+        }
+
+        patientRepository.delete(discarded)
+
+        val log = PatientMergeLog().apply {
+            duplicateCandidate1 = request.duplicateCandidate1
+            duplicateCandidate2 = request.duplicateCandidate2
+            duplicateScore = request.duplicateScore
+            candidateRecordA = request.candidateRecordA
+            candidateRecordB = request.candidateRecordB
+            mergeOption = request.mergeOption
+            confirmMerge = request.confirmMerge
+            mergedIntoPatientId = request.mergedIntoPatientId
+            discardedPatientId = request.discardedPatientId
+            mergeReason = request.mergeReason
+            mergedBy = request.mergedBy
+        }
+
+        em.persist(log)
+    }
 
     @Transactional
     fun updatePatient(id: Long, dto: PatientDto): Patient {
@@ -141,6 +190,7 @@ class PatientService {
         existing.emergencyName = dto.emergencyName
 
         existing.emergencyPhone = dto.emergencyPhone
+        existing.birthDate = dto.birthDate
 
 
 

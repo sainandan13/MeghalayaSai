@@ -70,4 +70,13 @@ class PatientController {
         )
         return Response.ok(results).build()
     }
+
+    @POST
+    @Path("/merge")
+    @Operation(summary = "Merge duplicate patient records")
+    fun mergePatients(request: PatientMergeRequest): Response {
+        service.mergePatients(request)
+        return Response.ok(mapOf("message" to "Patients merged successfully"))
+            .build()
+    }
 }
